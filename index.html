@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#161b22">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WordExplorer">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+
+  <title>Word Explorer — Etymology & Meanings</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-green: #3fb950;
+      --danger: #f85149;
+      --radius: 16px;
+    }
+
+    html { height: 100%; background: var(--bg); }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Search bar ── */
+    #search-bar {
+      position: sticky;
+      top: 0; /* stacks below header via DOM order */
+      z-index: 90;
+      background: var(--bg);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    #search-form {
+      display: flex;
+      gap: 8px;
+    }
+    #search-input {
+      flex: 1;
+      font-size: 16px; /* 16px minimum prevents iOS zoom */
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      outline: none;
+      -webkit-appearance: none;
+      min-height: 44px;
+      transition: border-color 0.15s;
+    }
+    #search-input::placeholder { color: var(--text-muted); }
+    #search-input:focus { border-color: var(--accent); }
+    #search-input::-webkit-search-cancel-button {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: var(--text-muted);
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 6l8 8M14 6l-8 8' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;
+      cursor: pointer;
+    }
+    #search-btn {
+      font-size: 15px;
+      font-family: inherit;
+      font-weight: 700;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 18px;
+      min-height: 44px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    #search-btn:active { opacity: 0.75; }
+
+    /* ── Content area ── */
+    #content {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 32px);
+    }
+
+    /* ── Empty state ── */
+    #empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 16px; }
+    .empty-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .empty-desc { font-size: 14px; line-height: 1.7; }
+    .example-words {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .example-chip {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--accent);
+      transition: background 0.15s;
+    }
+    .example-chip:active { background: var(--surface); }
+
+    /* ── Loading skeleton ── */
+    #loading-state { display: flex; flex-direction: column; gap: 12px; }
+    .skeleton-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .skeleton-line {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+      height: 14px;
+      margin-bottom: 10px;
+    }
+    .skeleton-line.wide  { width: 70%; }
+    .skeleton-line.medium { width: 50%; }
+    .skeleton-line.short { width: 35%; }
+    .skeleton-line.title { height: 36px; width: 55%; margin-bottom: 14px; }
+    .skeleton-image {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 12px;
+      aspect-ratio: 16/9;
+      width: 100%;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Error state ── */
+    #error-state { padding: 24px 0; }
+    .error-card {
+      background: #2d1117;
+      border: 1px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+    }
+    .error-icon { font-size: 40px; margin-bottom: 12px; }
+    .error-title { font-size: 18px; font-weight: 700; color: var(--danger); margin-bottom: 8px; }
+    .error-desc { font-size: 14px; color: var(--text-muted); }
+
+    /* ── Result cards ── */
+    #results { display: flex; flex-direction: column; gap: 12px; }
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      overflow: hidden;
+    }
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 0 0 12px;
+    }
+
+    /* word hero */
+    #word-hero { padding: 24px 20px 20px; }
+    .word-title {
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .phonetic {
+      font-size: 16px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 12px;
+    }
+    .audio-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      padding: 6px 14px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .audio-btn:active { opacity: 0.7; }
+
+    /* image */
+    #word-image {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      border-radius: 12px;
+      display: block;
+    }
+    .image-credit {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-align: right;
+    }
+    .image-credit a { color: var(--text-muted); }
+
+    /* etymology */
+    .etymology-text {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--text);
+      border-left: 3px solid var(--accent-green);
+      padding-left: 14px;
+      margin: 0;
+    }
+    .etymology-missing {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    .etymology-missing a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .etymology-missing a:hover { text-decoration: underline; }
+
+    /* meanings */
+    .pos-group { margin-bottom: 20px; }
+    .pos-group:last-child { margin-bottom: 0; }
+    .pos-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin: 0 0 10px;
+    }
+    .definition-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      counter-reset: def;
+    }
+    .definition-item {
+      display: flex;
+      gap: 10px;
+      counter-increment: def;
+    }
+    .definition-item::before {
+      content: counter(def);
+      min-width: 22px;
+      height: 22px;
+      background: var(--surface-2);
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .definition-body { flex: 1; }
+    .definition-text { font-size: 15px; margin: 0 0 4px; }
+    .definition-example {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-style: italic;
+      margin: 0;
+    }
+    .definition-example::before { content: '"'; }
+    .definition-example::after  { content: '"'; }
+
+    /* iOS install hint */
+    #ios-hint {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+      left: 16px;
+      right: 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      z-index: 200;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .ios-hint-icon { font-size: 24px; flex-shrink: 0; }
+    .ios-hint-text { font-size: 13px; color: var(--text); flex: 1; line-height: 1.5; }
+    .ios-hint-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">Word Explorer</div>
+  <div class="header-sub">語源・意味・画像で単語を覚える</div>
+</header>
+
+<div id="search-bar">
+  <form id="search-form" autocomplete="off">
+    <input
+      id="search-input"
+      type="search"
+      placeholder="Enter a word..."
+      autocapitalize="none"
+      autocorrect="off"
+      spellcheck="false"
+      enterkeyhint="search"
+      aria-label="Search word"
+    >
+    <button type="submit" id="search-btn">Search</button>
+  </form>
+</div>
+
+<main id="content">
+
+  <div id="empty-state">
+    <div class="empty-icon">📖</div>
+    <div class="empty-title">Look up any English word</div>
+    <div class="empty-desc">Search for a word to see its etymology,<br>meanings, and a visual image.</div>
+    <div class="example-words">
+      <span class="example-chip">etymology</span>
+      <span class="example-chip">serendipity</span>
+      <span class="example-chip">ephemeral</span>
+      <span class="example-chip">illuminate</span>
+    </div>
+  </div>
+
+  <div id="loading-state" hidden>
+    <div class="skeleton-card">
+      <div class="skeleton-line title"></div>
+      <div class="skeleton-line short"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-image"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-line medium"></div>
+      <div class="skeleton-line wide"></div>
+      <div class="skeleton-line medium"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line wide"></div>
+      <div class="skeleton-line medium"></div>
+      <div class="skeleton-line wide"></div>
+    </div>
+  </div>
+
+  <div id="error-state" hidden>
+    <div class="error-card">
+      <div class="error-icon" id="error-icon">🔍</div>
+      <div class="error-title" id="error-title">Word not found</div>
+      <div class="error-desc" id="error-desc">Check the spelling and try again.</div>
+    </div>
+  </div>
+
+  <div id="results" hidden>
+    <section class="result-card" id="word-hero">
+      <div class="word-title" id="word-title"></div>
+      <div class="phonetic" id="phonetic"></div>
+      <button class="audio-btn" id="audio-btn" hidden>▶ Play pronunciation</button>
+    </section>
+
+    <section class="result-card" id="image-card" hidden>
+      <div class="card-label">Image</div>
+      <img id="word-image" alt="" loading="lazy">
+      <p class="image-credit">Photo by <a href="https://pixabay.com" target="_blank" rel="noopener">Pixabay</a></p>
+    </section>
+
+    <section class="result-card" id="etymology-card">
+      <div class="card-label">Etymology 語源</div>
+      <p class="etymology-text" id="etymology-text" hidden></p>
+      <p class="etymology-missing" id="etymology-missing" hidden></p>
+    </section>
+
+    <section class="result-card" id="meanings-card">
+      <div class="card-label">Meanings 意味</div>
+      <div id="meanings-list"></div>
+    </section>
+  </div>
+
+</main>
+
+<div id="ios-hint" hidden>
+  <div class="ios-hint-icon">⬆️</div>
+  <div class="ios-hint-text">
+    <strong>Add to Home Screen</strong><br>
+    Tap the Share button, then "Add to Home Screen"
+  </div>
+  <button class="ios-hint-close" id="ios-hint-close" aria-label="Dismiss">×</button>
+</div>
+
+<script src="main.js?v=3"></script>
+</body>
+</html>
