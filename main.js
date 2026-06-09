@@ -30,6 +30,7 @@ const savedEmpty = $('saved-empty');
 const savedList = $('saved-list');
 const iosHint = $('ios-hint');
 const iosHintClose = $('ios-hint-close');
+const navPills = Array.from(document.querySelectorAll('.nav-pill'));
 
 const SAVED_WORDS_KEY = 'word-explorer-saved-words';
 
@@ -168,24 +169,45 @@ function pulseButton(button) {
 
 function setupPressEffects() {
   document.addEventListener('pointerdown', event => {
-    const target = event.target.closest('button, .resource-link');
+    const target = event.target.closest('button, .resource-link, .nav-pill');
     if (!target) return;
     target.classList.add('is-pressing');
   });
 
   for (const eventName of ['pointerup', 'pointercancel', 'pointerleave']) {
     document.addEventListener(eventName, event => {
-      const target = event.target.closest('button, .resource-link');
+      const target = event.target.closest('button, .resource-link, .nav-pill');
       if (!target) return;
       target.classList.remove('is-pressing');
     });
   }
 
   document.addEventListener('click', event => {
-    const target = event.target.closest('button, .resource-link');
+    const target = event.target.closest('button, .resource-link, .nav-pill');
     if (!target) return;
     pulseButton(target);
   });
+}
+
+function setupBottomNav() {
+  const updateActiveNav = () => {
+    const savedTop = $('saved-panel').getBoundingClientRect().top;
+    const activeHash = savedTop < window.innerHeight * 0.64 ? '#saved-panel' : '#search-bar';
+
+    navPills.forEach(pill => {
+      pill.classList.toggle('active', pill.getAttribute('href') === activeHash);
+    });
+  };
+
+  navPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      navPills.forEach(item => item.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+
+  window.addEventListener('scroll', updateActiveNav, { passive: true });
+  updateActiveNav();
 }
 
 function loadSavedWords() {
@@ -430,4 +452,5 @@ if ('serviceWorker' in navigator) {
 }
 
 setupPressEffects();
+setupBottomNav();
 renderSavedWords();
