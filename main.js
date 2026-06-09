@@ -157,6 +157,37 @@ function setExternalLink(word) {
   externalLink.href = `https://www.etymonline.com/word/${encodeURIComponent(word)}`;
 }
 
+function pulseButton(button) {
+  if (!button) return;
+
+  button.classList.remove('button-burst');
+  void button.offsetWidth;
+  button.classList.add('button-burst');
+  window.setTimeout(() => button.classList.remove('button-burst'), 460);
+}
+
+function setupPressEffects() {
+  document.addEventListener('pointerdown', event => {
+    const target = event.target.closest('button, .resource-link');
+    if (!target) return;
+    target.classList.add('is-pressing');
+  });
+
+  for (const eventName of ['pointerup', 'pointercancel', 'pointerleave']) {
+    document.addEventListener(eventName, event => {
+      const target = event.target.closest('button, .resource-link');
+      if (!target) return;
+      target.classList.remove('is-pressing');
+    });
+  }
+
+  document.addEventListener('click', event => {
+    const target = event.target.closest('button, .resource-link');
+    if (!target) return;
+    pulseButton(target);
+  });
+}
+
 function loadSavedWords() {
   try {
     const parsed = JSON.parse(localStorage.getItem(SAVED_WORDS_KEY) || '[]');
@@ -204,6 +235,7 @@ function toggleCurrentWordSaved() {
   persistSavedWords();
   renderSavedWords();
   updateSaveButton(word);
+  pulseButton(saveWordBtn);
 }
 
 function renderSavedWords() {
@@ -221,7 +253,7 @@ function renderSavedWords() {
       <div class="saved-item" data-word="${escHtml(item.word)}">
         <div>
           <button class="saved-word" type="button" data-action="search">${escHtml(item.word)}</button>
-          <div class="saved-meta">${escHtml([item.phonetic, savedDate].filter(Boolean).join(' · '))}</div>
+          <div class="saved-meta">${escHtml([item.phonetic, savedDate].filter(Boolean).join(' - '))}</div>
           ${item.summary ? `<div class="saved-summary">${escHtml(item.summary)}</div>` : ''}
         </div>
         <div class="saved-actions">
@@ -397,4 +429,5 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+setupPressEffects();
 renderSavedWords();

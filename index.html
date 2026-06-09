@@ -58,6 +58,15 @@
 
     button, input { font: inherit; }
 
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+      touch-action: manipulation;
+    }
+
     header {
       border-bottom: 1px solid var(--border);
       background: rgba(245, 247, 244, 0.92);
@@ -189,7 +198,6 @@
     }
 
     #search-btn:hover { background: var(--accent-strong); }
-    #search-btn:active { transform: translateY(1px); }
 
     #content {
       max-width: var(--content);
@@ -257,8 +265,6 @@
       border-color: var(--accent);
       background: #f7fbf8;
     }
-
-    .example-chip:active { transform: translateY(1px); }
 
     .study-panel {
       background: var(--surface);
@@ -451,12 +457,21 @@
     .audio-btn,
     .resource-link,
     .save-btn {
+      position: relative;
       min-height: 40px;
       border-radius: var(--radius);
       padding: 8px 12px;
       font-size: 14px;
       font-weight: 700;
       text-decoration: none;
+      overflow: hidden;
+      transform: translateY(0);
+      transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease;
     }
 
     .audio-btn,
@@ -472,6 +487,15 @@
       color: var(--accent-strong);
       background: var(--surface);
       cursor: pointer;
+    }
+
+    .save-btn.is-saved::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: calc(var(--radius) - 2px);
+      pointer-events: none;
     }
 
     .resource-link {
@@ -680,6 +704,7 @@
       padding: 0;
       text-align: left;
       cursor: pointer;
+      transition: color 0.15s ease, transform 0.15s ease;
     }
 
     .saved-meta {
@@ -702,6 +727,7 @@
     }
 
     .saved-action {
+      position: relative;
       min-height: 36px;
       border-radius: var(--radius);
       border: 1px solid var(--border-strong);
@@ -712,12 +738,88 @@
       padding: 6px 10px;
       cursor: pointer;
       white-space: nowrap;
+      overflow: hidden;
+      transform: translateY(0);
+      transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
     }
 
     .saved-action.danger {
       color: var(--danger);
       border-color: #e8b3ae;
       background: #fffafa;
+    }
+
+    #search-btn,
+    .example-chip,
+    .audio-btn,
+    .resource-link,
+    .save-btn,
+    .saved-action,
+    .ios-hint-close {
+      box-shadow: 0 0 0 rgba(47, 93, 98, 0);
+      transform: translateY(0) scale(1);
+      user-select: none;
+    }
+
+    #search-btn:hover,
+    .audio-btn:hover,
+    .save-btn:hover,
+    .resource-link:hover,
+    .saved-action:hover {
+      box-shadow: 0 8px 18px rgba(47, 93, 98, 0.12);
+    }
+
+    #search-btn:active,
+    .example-chip:active,
+    .audio-btn:active,
+    .resource-link:active,
+    .save-btn:active,
+    .saved-action:active,
+    .ios-hint-close:active,
+    .is-pressing {
+      transform: translateY(2px) scale(0.98);
+      box-shadow: 0 2px 6px rgba(47, 93, 98, 0.10) inset;
+    }
+
+    .saved-word:active,
+    .saved-word.is-pressing {
+      color: var(--accent);
+      transform: translateY(1px);
+    }
+
+    .button-burst {
+      animation: button-burst 0.42s ease;
+    }
+
+    .save-btn.button-burst {
+      animation: button-burst 0.42s ease, saved-glow 0.72s ease;
+    }
+
+    @keyframes button-burst {
+      0% { transform: translateY(2px) scale(0.98); }
+      45% { transform: translateY(-1px) scale(1.025); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    @keyframes saved-glow {
+      0% { box-shadow: 0 0 0 0 rgba(47, 93, 98, 0.25); }
+      70% { box-shadow: 0 0 0 8px rgba(47, 93, 98, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(47, 93, 98, 0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
     }
 
     #ios-hint {
@@ -1014,6 +1116,6 @@
   <button class="ios-hint-close" id="ios-hint-close" aria-label="Dismiss">x</button>
 </div>
 
-<script src="main.js?v=5"></script>
+<script src="main.js?v=6"></script>
 </body>
 </html>
