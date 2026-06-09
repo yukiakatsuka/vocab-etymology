@@ -1,4 +1,4 @@
-const CACHE = 'vocab-etymology-v4';
+const CACHE = 'vocab-etymology-v5';
 const SHELL = [
   './index.html',
   './main.js',

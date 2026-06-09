@@ -17,6 +17,7 @@ const errorDesc = $('error-desc');
 const results = $('results');
 const wordTitle = $('word-title');
 const phoneticEl = $('phonetic');
+const saveWordBtn = $('save-word-btn');
 const audioBtn = $('audio-btn');
 const externalLink = $('external-link');
 const imageCard = $('image-card');
@@ -24,11 +25,18 @@ const wordImage = $('word-image');
 const etymologyText = $('etymology-text');
 const etymologyMiss = $('etymology-missing');
 const meaningsList = $('meanings-list');
+const savedCount = $('saved-count');
+const savedEmpty = $('saved-empty');
+const savedList = $('saved-list');
 const iosHint = $('ios-hint');
 const iosHintClose = $('ios-hint-close');
 
+const SAVED_WORDS_KEY = 'word-explorer-saved-words';
+
 let currentWord = '';
 let currentAudio = null;
+let currentEntry = null;
+let savedWords = loadSavedWords();
 
 async function fetchDefinition(word) {
   const res = await fetch(DICT_API + encodeURIComponent(word));
@@ -110,6 +118,11 @@ function extractMeanings(entries) {
   return result;
 }
 
+function getPrimaryDefinition(entries) {
+  const meanings = extractMeanings(entries);
+  return meanings[0]?.defs[0]?.definition || '';
+}
+
 function renderMeanings(meanings) {
   if (meanings.length === 0) {
     return '<p class="etymology-missing">No definition data is available for this word yet.</p>';
@@ -144,12 +157,96 @@ function setExternalLink(word) {
   externalLink.href = `https://www.etymonline.com/word/${encodeURIComponent(word)}`;
 }
 
+function loadSavedWords() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SAVED_WORDS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(item => item && item.word) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedWords() {
+  localStorage.setItem(SAVED_WORDS_KEY, JSON.stringify(savedWords));
+}
+
+function isSaved(word) {
+  return savedWords.some(item => item.word.toLowerCase() === word.toLowerCase());
+}
+
+function updateSaveButton(word) {
+  const saved = isSaved(word);
+  saveWordBtn.textContent = saved ? 'Saved' : 'Save word';
+  saveWordBtn.classList.toggle('is-saved', saved);
+  saveWordBtn.setAttribute('aria-pressed', String(saved));
+}
+
+function toggleCurrentWordSaved() {
+  if (!currentEntry) return;
+
+  const word = currentEntry.word || currentWord;
+  const normalized = word.toLowerCase();
+
+  if (isSaved(word)) {
+    savedWords = savedWords.filter(item => item.word.toLowerCase() !== normalized);
+  } else {
+    savedWords = [
+      {
+        word,
+        phonetic: currentEntry.phonetic || '',
+        summary: currentEntry.summary || '',
+        savedAt: new Date().toISOString(),
+      },
+      ...savedWords.filter(item => item.word.toLowerCase() !== normalized),
+    ];
+  }
+
+  persistSavedWords();
+  renderSavedWords();
+  updateSaveButton(word);
+}
+
+function renderSavedWords() {
+  const count = savedWords.length;
+  savedCount.textContent = `${count} ${count === 1 ? 'word' : 'words'}`;
+  savedEmpty.hidden = count > 0;
+  savedList.hidden = count === 0;
+
+  savedList.innerHTML = savedWords.map(item => {
+    const savedDate = item.savedAt
+      ? new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(item.savedAt))
+      : 'Saved';
+
+    return `
+      <div class="saved-item" data-word="${escHtml(item.word)}">
+        <div>
+          <button class="saved-word" type="button" data-action="search">${escHtml(item.word)}</button>
+          <div class="saved-meta">${escHtml([item.phonetic, savedDate].filter(Boolean).join(' · '))}</div>
+          ${item.summary ? `<div class="saved-summary">${escHtml(item.summary)}</div>` : ''}
+        </div>
+        <div class="saved-actions">
+          <button class="saved-action" type="button" data-action="search">Study again</button>
+          <button class="saved-action danger" type="button" data-action="remove">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderResults(entries, imageUrl) {
   const displayWord = entries[0].word || currentWord;
+  const phonetic = extractPhonetic(entries);
+
+  currentEntry = {
+    word: displayWord,
+    phonetic: phonetic ? phonetic.text : '',
+    summary: getPrimaryDefinition(entries),
+  };
+
   wordTitle.textContent = displayWord;
   setExternalLink(displayWord);
+  updateSaveButton(displayWord);
 
-  const phonetic = extractPhonetic(entries);
   phoneticEl.textContent = phonetic ? phonetic.text : 'Pronunciation unavailable';
 
   const audioUrl = extractAudio(entries);
@@ -188,6 +285,7 @@ function showLoading() {
   emptyState.hidden = true;
   errorState.hidden = true;
   results.hidden = true;
+  currentEntry = null;
   loadingState.hidden = false;
 }
 
@@ -247,6 +345,30 @@ audioBtn.addEventListener('click', () => {
   currentAudio.play().catch(() => {});
 });
 
+saveWordBtn.addEventListener('click', toggleCurrentWordSaved);
+
+savedList.addEventListener('click', event => {
+  const button = event.target.closest('button');
+  if (!button) return;
+
+  const item = button.closest('.saved-item');
+  const word = item?.dataset.word;
+  if (!word) return;
+
+  if (button.dataset.action === 'remove') {
+    savedWords = savedWords.filter(saved => saved.word.toLowerCase() !== word.toLowerCase());
+    persistSavedWords();
+    renderSavedWords();
+    if (currentEntry?.word.toLowerCase() === word.toLowerCase()) {
+      updateSaveButton(currentEntry.word);
+    }
+    return;
+  }
+
+  searchInput.value = word;
+  search(word);
+});
+
 document.querySelectorAll('.example-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     const word = chip.textContent.trim();
@@ -274,3 +396,5 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
+
+renderSavedWords();

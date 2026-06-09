@@ -449,7 +449,8 @@
     }
 
     .audio-btn,
-    .resource-link {
+    .resource-link,
+    .save-btn {
       min-height: 40px;
       border-radius: var(--radius);
       padding: 8px 12px;
@@ -458,10 +459,18 @@
       text-decoration: none;
     }
 
-    .audio-btn {
+    .audio-btn,
+    .save-btn.is-saved {
       background: var(--accent);
       color: #fff;
       border: 0;
+      cursor: pointer;
+    }
+
+    .save-btn {
+      border: 1px solid var(--border-strong);
+      color: var(--accent-strong);
+      background: var(--surface);
       cursor: pointer;
     }
 
@@ -603,6 +612,114 @@
     .definition-example::before { content: "\""; }
     .definition-example::after { content: "\""; }
 
+    #saved-panel {
+      margin-top: 24px;
+    }
+
+    .saved-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .saved-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--accent-strong);
+    }
+
+    .saved-sub {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 5px 0 0;
+    }
+
+    .saved-count {
+      color: var(--accent-blue);
+      background: var(--surface-blue);
+      border: 1px solid #cfdaeb;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 13px;
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    .saved-empty {
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .saved-list {
+      display: grid;
+      gap: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .saved-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .saved-word {
+      border: 0;
+      background: transparent;
+      color: var(--accent-strong);
+      font-size: 17px;
+      font-weight: 760;
+      padding: 0;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .saved-meta {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .saved-summary {
+      color: var(--text);
+      font-size: 14px;
+      margin-top: 5px;
+      max-width: 72ch;
+    }
+
+    .saved-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .saved-action {
+      min-height: 36px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--accent-strong);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .saved-action.danger {
+      color: var(--danger);
+      border-color: #e8b3ae;
+      background: #fffafa;
+    }
+
     #ios-hint {
       position: fixed;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
@@ -694,6 +811,14 @@
       #image-card {
         margin-top: 14px;
       }
+
+      .saved-item {
+        grid-template-columns: 1fr;
+      }
+
+      .saved-actions {
+        justify-content: flex-start;
+      }
     }
 
     @media (max-width: 560px) {
@@ -726,6 +851,11 @@
 
       #image-card {
         padding: 0;
+      }
+
+      .saved-header {
+        align-items: flex-start;
+        flex-direction: column;
       }
     }
   </style>
@@ -834,6 +964,7 @@
         <h2 class="word-title" id="word-title"></h2>
         <div class="phonetic" id="phonetic"></div>
         <div class="hero-actions">
+          <button class="save-btn" id="save-word-btn" type="button">Save word</button>
           <button class="audio-btn" id="audio-btn" hidden>Play pronunciation</button>
           <a class="resource-link" id="external-link" href="#" target="_blank" rel="noopener">Open Etymonline</a>
         </div>
@@ -859,6 +990,19 @@
     </div>
   </div>
 
+  <section class="result-card" id="saved-panel" aria-labelledby="saved-title">
+    <div class="saved-header">
+      <div>
+        <p class="card-label">Study list</p>
+        <h2 class="saved-title" id="saved-title">Saved words</h2>
+        <p class="saved-sub">Keep words on this device and tap one to study it again.</p>
+      </div>
+      <div class="saved-count" id="saved-count">0 words</div>
+    </div>
+    <p class="saved-empty" id="saved-empty">No saved words yet. Search a word, then use Save word.</p>
+    <div class="saved-list" id="saved-list" hidden></div>
+  </section>
+
 </main>
 
 <div id="ios-hint" hidden>
@@ -870,6 +1014,6 @@
   <button class="ios-hint-close" id="ios-hint-close" aria-label="Dismiss">x</button>
 </div>
 
-<script src="main.js?v=4"></script>
+<script src="main.js?v=5"></script>
 </body>
 </html>
