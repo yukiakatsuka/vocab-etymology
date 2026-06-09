@@ -1,8 +1,10 @@
-const CACHE = 'vocab-etymology-v2';
+const CACHE = 'vocab-etymology-v4';
 const SHELL = [
   './index.html',
   './main.js',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
 ];
 
 self.addEventListener('install', event => {
@@ -28,7 +30,6 @@ self.addEventListener('fetch', event => {
   const isAPI = url.hostname === 'api.dictionaryapi.dev' || url.hostname === 'pixabay.com';
 
   if (isAPI) {
-    // Network-first for API calls
     event.respondWith(
       fetch(event.request).then(res => {
         const copy = res.clone();
@@ -36,16 +37,19 @@ self.addEventListener('fetch', event => {
         return res;
       }).catch(() => caches.match(event.request))
     );
-  } else {
-    // Cache-first for app shell
-    event.respondWith(
-      caches.match(event.request).then(cached =>
-        cached || fetch(event.request).then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(event.request, copy));
-          return res;
-        })
-      )
-    );
+    return;
   }
+
+  event.respondWith(
+    fetch(event.request).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(event.request, copy));
+      return res;
+    }).catch(() =>
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return caches.open(CACHE).then(c => c.match('./index.html'));
+      })
+    )
+  );
 });

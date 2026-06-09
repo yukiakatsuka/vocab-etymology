@@ -1,13 +1,13 @@
 {
-  "name": "Word Explorer — Etymology & Meanings",
+  "name": "Word Explorer - Etymology & Meanings",
   "short_name": "WordExplorer",
   "description": "Search English words to see their etymology, meanings, and a visual image.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0d1117",
-  "theme_color": "#161b22",
+  "background_color": "#f5f7f4",
+  "theme_color": "#f5f7f4",
   "icons": [
     {
       "src": "icon-192.png",
