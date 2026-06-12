@@ -12,6 +12,7 @@ Checks:
 - Save state changes to Saved and persists to the local saved words list.
 - Bottom navigation switches active state between Search and Saved.
 - Reduced-motion preferences are respected.
+- Image candidates render as a 3-choice picker, and the selected image persists per word.
 
 Notes:
 - The implementation uses the existing vocabulary app structure and avoids fake extra routes.

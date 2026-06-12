@@ -527,6 +527,72 @@
       background: var(--surface-muted);
     }
 
+    .image-tools {
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.78);
+      border-top: 1px solid var(--border);
+    }
+
+    .image-tools-title {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .image-candidates {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    .image-choice {
+      position: relative;
+      border: 2px solid transparent;
+      border-radius: 15px;
+      padding: 0;
+      background: var(--surface-muted);
+      overflow: hidden;
+      cursor: pointer;
+      aspect-ratio: 1;
+      box-shadow: 0 0 0 rgba(46, 67, 94, 0);
+      transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .image-choice img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .image-choice.is-selected {
+      border-color: var(--accent);
+      box-shadow: 0 8px 18px rgba(10, 132, 255, 0.18);
+    }
+
+    .image-choice.is-selected::after {
+      content: "Selected";
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
+      border-radius: 999px;
+      padding: 3px 6px;
+      background: rgba(10, 132, 255, 0.86);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 760;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
     .image-credit {
       font-size: 12px;
       color: var(--text-muted);
@@ -766,6 +832,7 @@
     .resource-link,
     .save-btn,
     .saved-action,
+    .image-choice,
     .ios-hint-close,
     .nav-pill {
       box-shadow: 0 0 0 rgba(47, 93, 98, 0);
@@ -787,6 +854,7 @@
     .resource-link:active,
     .save-btn:active,
     .saved-action:active,
+    .image-choice:active,
     .ios-hint-close:active,
     .nav-pill:active,
     .is-pressing {
@@ -1129,6 +1197,10 @@
 
       <section class="result-card" id="image-card" hidden>
         <img id="word-image" alt="" loading="lazy">
+        <div class="image-tools" id="image-tools" hidden>
+          <p class="image-tools-title">Choose the image that fits</p>
+          <div class="image-candidates" id="image-candidates"></div>
+        </div>
         <p class="image-credit">Photo by <a href="https://pixabay.com" target="_blank" rel="noopener">Pixabay</a></p>
       </section>
     </aside>
@@ -1178,6 +1250,6 @@
   </div>
 </nav>
 
-<script src="main.js?v=7"></script>
+<script src="main.js?v=8"></script>
 </body>
 </html>

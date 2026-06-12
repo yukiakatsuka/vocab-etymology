@@ -22,6 +22,8 @@ const audioBtn = $('audio-btn');
 const externalLink = $('external-link');
 const imageCard = $('image-card');
 const wordImage = $('word-image');
+const imageTools = $('image-tools');
+const imageCandidates = $('image-candidates');
 const etymologyText = $('etymology-text');
 const etymologyMiss = $('etymology-missing');
 const meaningsList = $('meanings-list');
@@ -33,11 +35,13 @@ const iosHintClose = $('ios-hint-close');
 const navPills = Array.from(document.querySelectorAll('.nav-pill'));
 
 const SAVED_WORDS_KEY = 'word-explorer-saved-words';
+const SELECTED_IMAGES_KEY = 'word-explorer-selected-images';
 
 let currentWord = '';
 let currentAudio = null;
 let currentEntry = null;
 let savedWords = loadSavedWords();
+let selectedImages = loadSelectedImages();
 
 async function fetchDefinition(word) {
   const res = await fetch(DICT_API + encodeURIComponent(word));
@@ -49,20 +53,27 @@ async function fetchDefinition(word) {
   return res.json();
 }
 
-async function fetchImage(word) {
+async function fetchImageCandidates(word) {
   if (!PIXABAY_KEY) return null;
 
   const url = `${PIXABAY_API}?key=${PIXABAY_KEY}&q=${encodeURIComponent(word)}&image_type=photo&per_page=3&safesearch=true&orientation=horizontal`;
   const res = await fetch(url);
-  if (!res.ok) return null;
+  if (!res.ok) return [];
 
   const data = await res.json();
-  if (!data.hits || data.hits.length === 0) return null;
+  if (!data.hits || data.hits.length === 0) return [];
 
-  const hit = data.hits[0];
-  return hit.previewURL
-    ? hit.previewURL.replace('_150.', '_640.')
-    : hit.webformatURL;
+  return data.hits.slice(0, 3).map(hit => {
+    const url = hit.previewURL
+      ? hit.previewURL.replace('_150.', '_640.')
+      : hit.webformatURL;
+
+    return {
+      url,
+      preview: hit.previewURL || hit.webformatURL || url,
+      tags: hit.tags || '',
+    };
+  }).filter(candidate => candidate.url);
 }
 
 function extractEtymology(entries) {
@@ -219,6 +230,19 @@ function loadSavedWords() {
   }
 }
 
+function loadSelectedImages() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SELECTED_IMAGES_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistSelectedImages() {
+  localStorage.setItem(SELECTED_IMAGES_KEY, JSON.stringify(selectedImages));
+}
+
 function persistSavedWords() {
   localStorage.setItem(SAVED_WORDS_KEY, JSON.stringify(savedWords));
 }
@@ -287,14 +311,70 @@ function renderSavedWords() {
   }).join('');
 }
 
-function renderResults(entries, imageUrl) {
+function normalizeWordKey(word) {
+  return String(word || '').trim().toLowerCase();
+}
+
+function setSelectedImage(word, imageUrl) {
+  const key = normalizeWordKey(word);
+  if (!key || !imageUrl) return;
+
+  selectedImages[key] = imageUrl;
+  persistSelectedImages();
+  renderImageCandidates(word, currentEntry?.imageCandidates || []);
+  showWordImage(word, imageUrl);
+}
+
+function showWordImage(word, imageUrl) {
+  if (!imageUrl) {
+    imageCard.hidden = true;
+    imageTools.hidden = true;
+    wordImage.removeAttribute('src');
+    return;
+  }
+
+  wordImage.src = imageUrl;
+  wordImage.alt = `${word} visual reference`;
+  imageCard.hidden = false;
+}
+
+function renderImageCandidates(word, candidates) {
+  const key = normalizeWordKey(word);
+  const savedUrl = selectedImages[key];
+  const uniqueCandidates = [];
+  const seen = new Set();
+
+  if (savedUrl) {
+    uniqueCandidates.push({ url: savedUrl, preview: savedUrl, tags: 'selected image' });
+    seen.add(savedUrl);
+  }
+
+  for (const candidate of candidates) {
+    if (!candidate.url || seen.has(candidate.url)) continue;
+    uniqueCandidates.push(candidate);
+    seen.add(candidate.url);
+  }
+
+  const visibleCandidates = uniqueCandidates.slice(0, 3);
+  imageTools.hidden = visibleCandidates.length < 2;
+  imageCandidates.innerHTML = visibleCandidates.map(candidate => `
+    <button class="image-choice${candidate.url === (savedUrl || visibleCandidates[0]?.url) ? ' is-selected' : ''}" type="button" data-image-url="${escHtml(candidate.url)}" aria-label="Use this image for ${escHtml(word)}">
+      <img src="${escHtml(candidate.preview || candidate.url)}" alt="${escHtml(candidate.tags || word)} candidate image" loading="lazy">
+    </button>
+  `).join('');
+}
+
+function renderResults(entries, imageCandidatesResult) {
   const displayWord = entries[0].word || currentWord;
   const phonetic = extractPhonetic(entries);
+  const candidates = Array.isArray(imageCandidatesResult) ? imageCandidatesResult : [];
+  const selectedImage = selectedImages[normalizeWordKey(displayWord)] || candidates[0]?.url || '';
 
   currentEntry = {
     word: displayWord,
     phonetic: phonetic ? phonetic.text : '',
     summary: getPrimaryDefinition(entries),
+    imageCandidates: candidates,
   };
 
   wordTitle.textContent = displayWord;
@@ -312,14 +392,8 @@ function renderResults(entries, imageUrl) {
     audioBtn.hidden = true;
   }
 
-  if (imageUrl) {
-    wordImage.src = imageUrl;
-    wordImage.alt = `${displayWord} visual reference`;
-    imageCard.hidden = false;
-  } else {
-    imageCard.hidden = true;
-    wordImage.removeAttribute('src');
-  }
+  showWordImage(displayWord, selectedImage);
+  renderImageCandidates(displayWord, candidates);
 
   const etymology = extractEtymology(entries);
   if (etymology) {
@@ -374,7 +448,7 @@ async function search(word) {
 
   const [dictResult, imageResult] = await Promise.allSettled([
     fetchDefinition(word),
-    fetchImage(word),
+    fetchImageCandidates(word),
   ]);
 
   if (dictResult.status === 'rejected') {
@@ -383,7 +457,7 @@ async function search(word) {
   }
 
   hideLoading();
-  renderResults(dictResult.value, imageResult.value ?? null);
+  renderResults(dictResult.value, imageResult.value ?? []);
   results.hidden = false;
 }
 
@@ -400,6 +474,12 @@ audioBtn.addEventListener('click', () => {
 });
 
 saveWordBtn.addEventListener('click', toggleCurrentWordSaved);
+
+imageCandidates.addEventListener('click', event => {
+  const button = event.target.closest('.image-choice');
+  if (!button || !currentEntry) return;
+  setSelectedImage(currentEntry.word, button.dataset.imageUrl);
+});
 
 savedList.addEventListener('click', event => {
   const button = event.target.closest('button');
